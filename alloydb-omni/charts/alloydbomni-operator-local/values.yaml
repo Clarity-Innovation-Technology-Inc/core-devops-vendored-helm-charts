@@ -1,0 +1,7 @@
+# Default values for samwise-local.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+image:
+  registry: gcr.io
+  repository: alloydb-omni
+  tag: 0.1.0

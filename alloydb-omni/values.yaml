@@ -1,0 +1,17 @@
+# Default values for samwise.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+alloydbomni-operator-local:
+  image:
+    registry: gcr.io
+    repository: alloydb-omni
+    tag: 0.1.0
+
+alloydbomni-operator-fleet:
+  image:
+    registry: gcr.io
+    repository: alloydb-omni
+    dataplane-repository: alloydb-omni
+    dataplane-tag: 15.2.1
+    tag: 0.1.0

@@ -1,0 +1,629 @@
+apiVersion: alloydbomni.dbadmin.goog/v1
+kind: ControlPlaneAgentsVersion
+metadata:
+  annotations:
+    helm.sh/resource-policy: keep
+  name: alloydbomni-{{ .Values.image.tag}}
+  namespace: alloydb-omni-system
+spec:
+  components:
+  - name: dbinit
+    uri: {{ .Values.image.registry}}/{{ .Values.image.repository}}/operator/dbinit:{{ .Values.image.tag}}
+  - name: logrotate
+    uri: {{ .Values.image.registry}}/{{ .Values.image.repository}}/operator/logrotate:{{ .Values.image.tag}}
+  - name: monitoring
+    uri: {{ .Values.image.registry}}/{{ .Values.image.repository}}/operator/monitoring:{{ .Values.image.tag}}
+  databaseengine: AlloyDBOmni
+  version: latest
+---
+apiVersion: alloydbomni.dbadmin.goog/v1
+kind: DatabaseVersion
+metadata:
+  name: alloydbomni-15
+spec:
+  databaseEngine: AlloyDBOmni
+  defaultMinorVersion: "2.1"
+  majorVersion: "15"
+  minorDatabaseVersions:
+  - components:
+    - name: database
+      uri: {{ .Values.image.registry}}/{{ .Values.image.repository}}/operator/alloydbomni:15.2.1
+    - name: memoryagent
+      uri: {{ .Values.image.registry}}/{{ index .Values.image "dataplane-repository" }}/memory-agent:{{ index .Values.image "dataplane-tag" }}
+    - name: ml-agent
+      uri: {{ .Values.image.registry}}/{{ index .Values.image "dataplane-repository" }}/ml-agent:{{ index .Values.image "dataplane-tag" }}
+    version: "2.1"
+    versionDisplayName: AlloyDBOmni 15.2.1
+  versionDisplayName: AlloyDBOmni 15
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: alloydbomni-selfsigned-cluster-issuer
+spec:
+  selfSigned: {}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: fleet-controller-manager
+  namespace: alloydb-omni-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: fleet-leader-election-role
+  namespace: alloydb-omni-system
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: fleet-manager-role
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - namespaces
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - alloydbomni.dbadmin.goog
+  resources:
+  - backupplans
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - alloydbomni.dbadmin.goog
+  resources:
+  - backupplans/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - alloydbomni.dbadmin.goog
+  resources:
+  - backupplans/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - alloydbomni.dbadmin.goog
+  resources:
+  - backups
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - alloydbomni.dbadmin.goog
+  resources:
+  - backups/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - alloydbomni.dbadmin.goog
+  resources:
+  - backups/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - alloydbomni.dbadmin.goog
+  resources:
+  - controlplaneagentsversions
+  verbs:
+  - get
+  - list
+  - patch
+  - watch
+- apiGroups:
+  - alloydbomni.dbadmin.goog
+  resources:
+  - controlplaneagentsversions/status
+  verbs:
+  - create
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - alloydbomni.dbadmin.goog
+  resources:
+  - databaseversions
+  verbs:
+  - create
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - alloydbomni.dbadmin.goog
+  resources:
+  - databaseversions/status
+  verbs:
+  - create
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - alloydbomni.dbadmin.goog
+  resources:
+  - dbclusters
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - alloydbomni.dbadmin.goog
+  resources:
+  - dbclusters/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - alloydbomni.dbadmin.goog
+  resources:
+  - dbclusters/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - alloydbomni.dbadmin.goog
+  resources:
+  - failovers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - alloydbomni.dbadmin.goog
+  resources:
+  - failovers/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - alloydbomni.dbadmin.goog
+  resources:
+  - restores
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - alloydbomni.dbadmin.goog
+  resources:
+  - restores/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - alloydbomni.dbadmin.goog
+  resources:
+  - restores/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - alloydbomni.dbadmin.goog
+  resources:
+  - softwarelibraries
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - alloydbomni.internal.dbadmin.goog
+  resources:
+  - failovers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - alloydbomni.internal.dbadmin.goog
+  resources:
+  - failovers/status
+  verbs:
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - alloydbomni.internal.dbadmin.goog
+  resources:
+  - instancebackupplans
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - alloydbomni.internal.dbadmin.goog
+  resources:
+  - instancebackupplans/status
+  verbs:
+  - delete
+  - get
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - alloydbomni.internal.dbadmin.goog
+  resources:
+  - instancebackups
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - alloydbomni.internal.dbadmin.goog
+  resources:
+  - instancebackups/status
+  verbs:
+  - delete
+  - get
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - alloydbomni.internal.dbadmin.goog
+  resources:
+  - instancerestores
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - alloydbomni.internal.dbadmin.goog
+  resources:
+  - instancerestores/status
+  verbs:
+  - delete
+  - get
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - alloydbomni.internal.dbadmin.goog
+  resources:
+  - instances
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - alloydbomni.internal.dbadmin.goog
+  resources:
+  - instances/status
+  verbs:
+  - delete
+  - get
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - baremetal.cluster.gke.io
+  resources:
+  - clusters
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - cert-manager.io
+  resources:
+  - certificates
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - cert-manager.io
+  resources:
+  - issuers
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - fleet.dbadmin.gdc.goog
+  resources:
+  - controlplaneagentsversions
+  verbs:
+  - get
+  - list
+- apiGroups:
+  - network.private.gdc.goog
+  resources:
+  - dnsregistrations
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - networkpolicies
+  verbs:
+  - create
+  - delete
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: fleet-metrics-reader
+rules:
+- nonResourceURLs:
+  - /metrics
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: fleet-proxy-role
+rules:
+- apiGroups:
+  - authentication.k8s.io
+  resources:
+  - tokenreviews
+  verbs:
+  - create
+- apiGroups:
+  - authorization.k8s.io
+  resources:
+  - subjectaccessreviews
+  verbs:
+  - create
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: fleet-leader-election-rolebinding
+  namespace: alloydb-omni-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: fleet-leader-election-role
+subjects:
+- kind: ServiceAccount
+  name: fleet-controller-manager
+  namespace: alloydb-omni-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: fleet-manager-rolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: fleet-manager-role
+subjects:
+- kind: ServiceAccount
+  name: fleet-controller-manager
+  namespace: alloydb-omni-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: fleet-proxy-rolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: fleet-proxy-role
+subjects:
+- kind: ServiceAccount
+  name: fleet-controller-manager
+  namespace: alloydb-omni-system
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    control-plane: controller-manager
+  name: fleet-controller-manager-metrics-service
+  namespace: alloydb-omni-system
+spec:
+  ports:
+  - name: https
+    port: 8443
+    targetPort: https
+  selector:
+    control-plane: controller-manager
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    fleet-control-plane: controller-manager
+  name: fleet-controller-manager
+  namespace: alloydb-omni-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      fleet-control-plane: controller-manager
+  template:
+    metadata:
+      labels:
+        fleet-control-plane: controller-manager
+    spec:
+      containers:
+      - args:
+        - --health-probe-bind-address=:8081
+        - --metrics-bind-address=127.0.0.1:8080
+        - --leader-elect
+        - --gke-project={{ .Values.image.repository}}
+        - --gke-tag={{ .Values.image.tag}}
+        command:
+        - /manager
+        image: {{ .Values.image.registry}}/{{ .Values.image.repository}}/operator/fleet-operator:{{ .Values.image.tag}}
+        imagePullPolicy: Always
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        name: manager
+        ports:
+        - containerPort: 9443
+          name: webhook-server
+          protocol: TCP
+        - containerPort: 8080
+          name: metrics
+          protocol: TCP
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8081
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          limits:
+            cpu: 500m
+            memory: 1024Mi
+          requests:
+            cpu: 500m
+            memory: 1024Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+        volumeMounts:
+        - mountPath: /tmp/k8s-webhook-server/serving-certs
+          name: cert
+          readOnly: true
+      - args:
+        - --secure-listen-address=0.0.0.0:8443
+        - --upstream=http://127.0.0.1:8080/
+        - --logtostderr=true
+        - --v=10
+        image: {{ .Values.image.registry}}/kubebuilder/kube-rbac-proxy:v0.14.1
+        name: kube-rbac-proxy
+        ports:
+        - containerPort: 8443
+          name: https
+      serviceAccountName: fleet-controller-manager
+      terminationGracePeriodSeconds: 10
+      volumes:
+      - name: cert
+        secret:
+          defaultMode: 420
+          secretName: fleet-webhook-server-cert

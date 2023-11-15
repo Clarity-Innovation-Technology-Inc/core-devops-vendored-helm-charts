@@ -1,0 +1,13 @@
+apiVersion: v2
+appVersion: 0.1.0
+dependencies:
+- name: alloydbomni-operator-fleet
+  repository: ""
+  version: 0.1.0
+- name: alloydbomni-operator-local
+  repository: ""
+  version: 0.1.0
+description: Database Service AlloyDB omni operator (including L1 and L2)
+name: alloydbomni-operator
+type: application
+version: 0.1.0-rc41
